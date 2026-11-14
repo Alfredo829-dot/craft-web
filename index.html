@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<title>Craft Web · Diseña desde tu cel</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Caveat:wght@400;700&family=Lobster&family=Montserrat:wght@400;700;900&family=Oswald:wght@400;700&family=Pacifico&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Poppins:ital,wght@0,400;0,600;0,800;1,400&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="logo"><span class="dot"></span>Craft <b>Web</b></div>
+  <div class="top-der">
+    <button id="btnCuenta" class="cuenta">☁ Entrar con correo</button>
+    <button id="btnAjustes" class="icono" aria-label="Ajustes">⚙</button>
+  </div>
+</header>
+
+<main>
+<div class="aviso" id="avisoRed" hidden>📡 Sin internet: puedes seguir diseñando y todo se guarda en tu teléfono. La IA vuelve cuando te conectes.</div>
+<!-- ===================== DISEÑO ===================== -->
+<section id="tab-diseno" class="tab activo">
+  <div class="intro" data-intro="diseno"><button class="cerrar" aria-label="Cerrar">✕</button><b>🎨 Diseña posts, flyers e historias</b><p>Escoge un tamaño y una plantilla, toca cualquier texto para cambiarlo y descarga en PNG o PDF.</p></div>
+  <div class="chips" id="dFormatos"></div>
+  <div class="grid4">
+    <button data-d="texto">🅣 Texto</button>
+    <button data-d="rect">▭ Rect.</button>
+    <button data-d="circulo">● Círculo</button>
+    <button data-d="triangulo">▲ Triáng.</button>
+    <button data-d="estrella">★ Estrella</button>
+    <button data-d="linea">― Línea</button>
+    <label class="btn">🖼 Imagen<input type="file" id="dImg" accept="image/*" hidden></label>
+    <label class="btn">🎨 Fondo<input type="color" id="dFondo" value="#ffffff" class="oculto-color"></label>
+    <button data-d="undo">↶ Deshacer</button>
+    <button data-d="redo">↷ Rehacer</button>
+    <button data-d="duplicar">📑 Duplicar</button>
+    <button data-d="borrar" class="peligro">🗑 Borrar</button>
+  </div>
+  <div class="lienzo-wrap" id="dWrap"><canvas id="dCanvas"></canvas></div>
+  <p class="hint">Toca un elemento para editarlo. Arrástralo para moverlo; usa las esquinas para cambiar tamaño.</p>
+
+  <details class="panel" id="dProps">
+    <summary>✏️ Propiedades <span id="dSelNombre" class="muted">(nada seleccionado)</span></summary>
+    <div class="props">
+      <div class="solo-texto">
+        <label>Texto<textarea id="pTexto" rows="2"></textarea></label>
+        <label>Fuente<select id="pFuente"></select></label>
+        <label>Tamaño <span id="pTamV"></span><input type="range" id="pTam" min="12" max="300"></label>
+        <div class="fila">
+          <button id="pNegrita"><b>N</b></button>
+          <button id="pCursiva"><i>K</i></button>
+          <button data-al="left">⬅︎</button>
+          <button data-al="center">↔︎</button>
+          <button data-al="right">➡︎</button>
+        </div>
+        <label>Interlineado <input type="range" id="pInter" min="0.7" max="2.5" step="0.05"></label>
+      </div>
+      <div class="fila2">
+        <label>Color<input type="color" id="pColor"></label>
+        <label>Borde<input type="color" id="pBorde"></label>
+      </div>
+      <label>Grosor de borde <input type="range" id="pBordeAncho" min="0" max="40"></label>
+      <label class="solo-rect">Esquinas redondas <input type="range" id="pRadio" min="0" max="300"></label>
+      <label>Opacidad <input type="range" id="pOpac" min="0.05" max="1" step="0.05"></label>
+      <div class="fila2">
+        <label class="check"><input type="checkbox" id="pSombra"> Sombra</label>
+        <label>Color sombra<input type="color" id="pSombraC" value="#000000"></label>
+      </div>
+      <div class="grid4">
+        <button data-d="adelante">⬆ Adelante</button>
+        <button data-d="atras">⬇ Atrás</button>
+        <button data-d="bloquear">🔒 Fijar</button>
+        <button data-d="voltear">⇋ Voltear</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="panel">
+    <summary>📐 Alinear al diseño</summary>
+    <div class="grid3">
+      <button data-alinear="izq">⇤ Izquierda</button>
+      <button data-alinear="ch">↔ Centro</button>
+      <button data-alinear="der">⇥ Derecha</button>
+      <button data-alinear="arr">⤒ Arriba</button>
+      <button data-alinear="cv">↕ Medio</button>
+      <button data-alinear="aba">⤓ Abajo</button>
+    </div>
+  </details>
+
+  <details class="panel" id="dCapasPanel">
+    <summary>🗂 Capas</summary>
+    <ul class="capas" id="dCapas"></ul>
+  </details>
+
+  <details class="panel" open>
+    <summary>✨ Plantillas</summary>
+    <div class="plantillas" id="dPlantillas"></div>
+  </details>
+
+  <div class="panel export">
+    <div class="titulo">⬇ Exportar</div>
+    <div class="grid3">
+      <button class="primario" data-d="png">PNG</button>
+      <button class="primario" data-d="pdf">PDF</button>
+      <button data-d="compartir">Compartir</button>
+    </div>
+    <button class="ancho" data-d="nuevo">＋ Diseño en blanco</button>
+  </div>
+</section>
+
+<!-- ===================== LIENZO ===================== -->
+<section id="tab-lienzo" class="tab">
+  <div class="intro" data-intro="lienzo"><button class="cerrar" aria-label="Cerrar">✕</button><b>🧩 Maqueta pantallas de apps y webs</b><p>Agrega un marco de teléfono o escritorio, arma la pantalla con componentes y exporta a imagen o a HTML.</p></div>
+  <div class="grid4">
+    <button data-l="marco-tel">📱 Teléfono</button>
+    <button data-l="marco-and">📱 Android</button>
+    <button data-l="marco-tab">▯ Tablet</button>
+    <button data-l="marco-esc">🖥 Escritorio</button>
+    <button data-l="rect">▭ Rect.</button>
+    <button data-l="texto">🅣 Texto</button>
+    <button data-l="boton">🔘 Botón</button>
+    <label class="btn">🖼 Imagen<input type="file" id="lImg" accept="image/*" hidden></label>
+    <button data-l="undo">↶ Deshacer</button>
+    <button data-l="redo">↷ Rehacer</button>
+    <button data-l="multi" id="lMulti">☐ Multi</button>
+    <button data-l="borrar" class="peligro">🗑 Borrar</button>
+  </div>
+  <div class="lienzo-wrap infinito" id="lWrap">
+    <canvas id="lCanvas"></canvas>
+    <div class="zoom-ctl">
+      <button data-l="zoom-menos">−</button>
+      <span id="lZoom">100%</span>
+      <button data-l="zoom-mas">+</button>
+      <button data-l="ajustar">⤢</button>
+    </div>
+  </div>
+  <p class="hint">Un dedo en el fondo mueve el lienzo y dos dedos hacen zoom. Toca un elemento para seleccionarlo.</p>
+
+  <details class="panel" id="lProps">
+    <summary>✏️ Propiedades <span id="lSelNombre" class="muted">(nada seleccionado)</span></summary>
+    <div class="props">
+      <label>Nombre<input type="text" id="lNombre"></label>
+      <label class="l-solo-texto">Texto<textarea id="lTexto" rows="2"></textarea></label>
+      <label class="l-solo-texto">Tamaño de letra <input type="range" id="lTam" min="8" max="120"></label>
+      <div class="fila2">
+        <label>Relleno<input type="color" id="lColor"></label>
+        <label>Borde<input type="color" id="lBorde"></label>
+      </div>
+      <label class="l-solo-rect">Esquinas <input type="range" id="lRadio" min="0" max="100"></label>
+      <div class="grid4">
+        <button data-l="duplicar">📑 Duplicar</button>
+        <button data-l="adelante">⬆ Adelante</button>
+        <button data-l="atras">⬇ Atrás</button>
+        <button data-l="bloquear">🔒 Fijar</button>
+        <button data-l="agrupar">▣ Agrupar</button>
+        <button data-l="desagrupar">▢ Separar</button>
+        <button data-l="guardar-comp" class="ancho2">⭐ Guardar componente</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="panel" open>
+    <summary>🧩 Componentes</summary>
+    <div class="grid3" id="lComps"></div>
+    <p class="hint">Selecciona algo y toca “Guardar componente” para reutilizarlo. Para borrar uno tuyo, déjalo presionado.</p>
+  </details>
+
+  <div class="panel export">
+    <div class="titulo">⬇ Exportar marco <span class="muted" id="lMarcoSel"></span></div>
+    <div class="grid3">
+      <button class="primario" data-l="png">PNG</button>
+      <button class="primario" data-l="html">HTML</button>
+      <button data-l="ver-html">Ver HTML</button>
+    </div>
+    <button class="ancho" data-l="nuevo">＋ Lienzo nuevo</button>
+  </div>
+</section>
+
+<!-- ===================== IA ===================== -->
+<section id="tab-ia" class="tab">
+  <div class="intro" data-intro="ia"><button class="cerrar" aria-label="Cerrar">✕</button><b>✨ Imágenes con IA, gratis</b><p>Describe lo que quieres. Varias IA la hacen al mismo tiempo, te muestro la mejor y con un toque la mandas a tu diseño.</p></div>
+  <div class="panel">
+    <label class="titulo" for="iaPrompt">¿Qué imagen quieres?</label>
+    <textarea id="iaPrompt" rows="3" placeholder="Ej: un gato astronauta tomando café en la luna"></textarea>
+    <div class="ideas" id="iaIdeas"></div>
+    <div class="titulo chico">Estilo</div>
+    <div class="chips wrap" id="iaEstilos"></div>
+    <div class="titulo chico">Tamaño</div>
+    <div class="chips wrap" id="iaTamanos"></div>
+    <div class="fila2">
+      <label>Semilla (opcional)<input type="number" id="iaSeed" placeholder="al azar" inputmode="numeric"></label>
+      <label class="check"><input type="checkbox" id="iaMejorar" checked> Mejorar prompt</label>
+    </div>
+    <button class="ancho primario grande" id="iaGenerar">✨ Generar gratis</button>
+    <div class="progreso" id="iaProgreso" hidden></div>
+    <div class="estado" id="iaEstado"></div>
+    <div class="esqueleto cargando" id="iaEsqueleto" hidden></div>
+    <div id="iaResultado" class="resultado" hidden>
+      <img id="iaGanadora" alt="Imagen generada">
+      <div class="fila-res"><span class="etiqueta" id="iaGano"></span><button id="iaOtra" class="chico">otra ›</button></div>
+      <div class="grid2">
+        <button class="primario" id="iaUsarD">🎨 Usar en Diseño</button>
+        <button id="iaUsarL">🧩 Usar en Lienzo</button>
+        <button id="iaBajar" class="ancho2">⬇ Descargar</button>
+      </div>
+    </div>
+    <p class="hint">Gratis: genero con varias IA a la vez y te muestro la mejor. Tarda entre 10 y 60 segundos.</p>
+  </div>
+  <div class="panel">
+    <div class="titulo">🖼 Mi galería <span class="muted" id="iaCuenta"></span></div>
+    <div class="galeria" id="iaGaleria"></div>
+  </div>
+</section>
+
+<!-- ===================== AJUSTES ===================== -->
+<section id="tab-ajustes" class="tab">
+  <div class="panel">
+    <div class="titulo">☁ Tu cuenta</div>
+    <p id="ajCuentaTxt" class="muted">Sin cuenta: todo se guarda en este teléfono.</p>
+    <p class="hint">Entra con tu correo (cuenta gratis de Puter) y tus diseños, lienzos, galería y apps quedan guardados en la nube. Así no se pierden si cambias de teléfono.</p>
+    <div class="grid2">
+      <button class="primario" id="ajEntrar">Entrar con correo</button>
+      <button id="ajSync">⟳ Sincronizar</button>
+      <button id="ajSalir" class="peligro">Cerrar sesión</button>
+      <button id="ajVolver">← Volver</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="titulo">🤖 Inteligencias artificiales</div>
+    <p class="hint">Pongo a trabajar todas al mismo tiempo, escojo la mejor respuesta y solo te muestro esa. Las llaves son opcionales y se quedan solo en este teléfono.</p>
+    <div id="ajProveedores"></div>
+  </div>
+</section>
+
+<!-- ===================== CLONAR ===================== -->
+<section id="tab-clonar" class="tab">
+  <div class="intro" data-intro="clonar"><button class="cerrar" aria-label="Cerrar">✕</button><b>⚡ Crea tu propia versión de una app</b><p>Pega el link de un sitio o describe una app. Varias IA la programan a la vez y te dejo la mejor, ya funcionando.</p></div>
+  <div class="panel">
+    <div class="chips" id="cModo">
+      <button data-modo="url" class="activo">🔗 Desde un link</button>
+      <button data-modo="idea">💡 Describir app</button>
+    </div>
+    <label class="c-url">Link del sitio o app<input type="url" id="cUrl" placeholder="https://ejemplo.com" inputmode="url" autocomplete="off"></label>
+    <label><span id="cIdeaTit">Detalles</span><textarea id="cIdea" rows="3" placeholder="Ej: una app para apuntar mis gastos con categorías y gráfica"></textarea></label>
+    <div class="ideas" id="cEjemplos"></div>
+    <button class="ancho primario grande" id="cGenerar">⚡ Crear mi versión</button>
+    <div class="progreso" id="cProgreso" hidden></div>
+    <div class="estado" id="cEstado"></div>
+    <p class="hint">Sale una primera versión original en un solo archivo HTML, con marca propia y sin copiar logos.</p>
+  </div>
+
+  <div class="panel" id="cResultado" hidden>
+    <div class="titulo">👀 Vista previa <span class="etiqueta" id="cInfo"></span></div>
+    <iframe id="cFrame" sandbox="allow-scripts allow-forms allow-modals" title="Vista previa"></iframe>
+    <div class="grid3">
+      <button data-c="regenerar">🔄 Regenerar</button>
+      <button data-c="codigo">‹/› Código</button>
+      <button data-c="descargar">⬇ .html</button>
+      <button data-c="guardar" class="primario">💾 Guardar</button>
+      <button data-c="abrir">↗ Abrir</button>
+      <button data-c="pantalla">⛶ Grande</button>
+    </div>
+    <pre class="codigo" id="cCodigo" hidden></pre>
+    <div class="titulo chico">💬 Pedir cambios</div>
+    <div class="chat" id="cChat"></div>
+    <div class="ideas" id="cRapidos"></div>
+    <textarea id="cCambio" rows="2" placeholder="Ej: ponle modo oscuro y un botón para borrar todo"></textarea>
+    <button class="ancho primario" id="cEnviar">Aplicar cambio</button>
+  </div>
+
+  <details class="panel" open>
+    <summary>📁 Mis apps <span class="muted" id="cCuenta"></span></summary>
+    <ul class="capas" id="cProyectos"></ul>
+  </details>
+</section>
+</main>
+
+<nav class="tabs">
+  <button data-tab="diseno" class="activo"><span>🎨</span>Diseño</button>
+  <button data-tab="lienzo"><span>🧩</span>Lienzo</button>
+  <button data-tab="ia"><span>✨</span>IA</button>
+  <button data-tab="clonar"><span>⚡</span>Clonar</button>
+</nav>
+
+<div class="visor" id="visor" hidden>
+  <div class="visor-caja">
+    <img id="visorImg" alt="">
+    <p id="visorTxt" class="muted"></p>
+    <div class="grid2">
+      <button class="primario" id="vDiseno">🎨 Usar en Diseño</button>
+      <button id="vLienzo">🧩 Usar en Lienzo</button>
+      <button id="vDescargar">⬇ Descargar</button>
+      <button id="vOtra">🔄 Otra versión</button>
+      <button id="vBorrar" class="peligro">🗑 Borrar</button>
+      <button id="vCerrar">✕ Cerrar</button>
+    </div>
+  </div>
+</div>
+<div class="pantalla" id="cPantalla" hidden>
+  <button id="cPantallaCerrar" class="primario">✕ Cerrar vista grande</button>
+  <iframe id="cFrameGrande" sandbox="allow-scripts allow-forms allow-modals" title="Vista grande"></iframe>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="lib/fabric.min.js"></script>
+<script src="lib/jspdf.umd.min.js"></script>
+<script src="https://js.puter.com/v2/"></script>
+<script src="js/util.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/diseno.js"></script>
+<script src="js/lienzo.js"></script>
+<script src="js/ia.js"></script>
+<script src="js/clonar.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
