@@ -172,18 +172,24 @@ const Sync = {
 class Historial {
   constructor(leer, aplicar, alGuardar) { this.leer = leer; this.aplicar = aplicar; this.alGuardar = alGuardar; this.pila = []; this.i = -1; this.bloq = false; this.t = null; }
   reiniciar() { this.pila = [this.leer()]; this.i = 0; }
-  push() {
+  push(ms = 250) {
     if (this.bloq) return;
+    if (this.t && ms === 0) { clearTimeout(this.t); this._guardarYa(); }
     clearTimeout(this.t);
-    this.t = setTimeout(() => {
+    this.t = setTimeout(() => this._guardarYa(), ms);
+  }
+  _guardarYa() {
+    this.t = null;
+    {
       if (this.bloq) return;
       const s = this.leer(); if (s === this.pila[this.i]) return;
       this.pila = this.pila.slice(0, this.i + 1); this.pila.push(s);
       if (this.pila.length > 60) this.pila.shift();
       this.i = this.pila.length - 1; this.alGuardar(s);
-    }, 250);
+    }
   }
   ir(d) {
+    if (this.t) { clearTimeout(this.t); this._guardarYa(); }
     const j = this.i + d; if (j < 0 || j >= this.pila.length) { toast(d < 0 ? 'Nada que deshacer' : 'Nada que rehacer'); return; }
     this.i = j; this.bloq = true;
     this.aplicar(this.pila[j], () => { this.bloq = false; this.alGuardar(this.pila[j]); });

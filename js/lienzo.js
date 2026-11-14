@@ -9,7 +9,7 @@ const Lienzo = {
     this.hist = new Historial(() => this.serializar(), (s, cb) => this.cargar(s, cb), s => this.guardar(s));
     const ev = () => this.hist.push();
     c.on('object:added', e => e.target && e.target.set({ cornerSize: 14, touchCornerSize: 40, padding: 2 }));
-    c.on('object:added', ev); c.on('object:removed', ev); c.on('object:modified', ev);
+    c.on('object:added', () => this.hist.push(0)); c.on('object:removed', () => this.hist.push(0)); c.on('object:modified', ev);
     ['selection:created', 'selection:updated', 'selection:cleared'].forEach(e => c.on(e, () => this.alSeleccionar()));
 
     /* Cuadrícula de puntos y nombres de marcos (solo en pantalla, no al exportar) */

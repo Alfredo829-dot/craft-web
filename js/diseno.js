@@ -15,7 +15,8 @@ const Diseno = {
     this.c = new fabric.Canvas('dCanvas', { preserveObjectStacking: true, backgroundColor: '#ffffff', enableRetinaScaling: true });
     this.hist = new Historial(() => this.serializar(), (s, cb) => this.cargar(s, cb), s => this.guardar(s));
     const ev = () => { this.hist.push(); this.pintarCapas(); };
-    this.c.on('object:added', ev); this.c.on('object:removed', ev); this.c.on('object:modified', ev);
+    const evYa = () => { this.hist.push(0); this.pintarCapas(); };
+    this.c.on('object:added', evYa); this.c.on('object:removed', evYa); this.c.on('object:modified', ev);
     this.c.on('selection:created', () => this.alSeleccionar()); this.c.on('selection:updated', () => this.alSeleccionar());
     this.c.on('selection:cleared', () => this.alSeleccionar());
     this.c.on('text:changed', e => { if (e.target === this.c.getActiveObject()) $('#pTexto').value = e.target.text; });

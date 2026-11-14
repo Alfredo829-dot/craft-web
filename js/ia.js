@@ -45,7 +45,9 @@ const IA = {
       clearInterval(reloj);
       if (!r.orden.length) {
         const f = r.fallas[0];
-        this.estado('No se pudo generar la imagen' + (f ? ` (${f.nombre}: ${String(f.error).slice(0, 60)})` : '') + '. Espera unos segundos y vuelve a intentar.', 'err');
+        const lim = f && /HTTP (402|429)/.test(f.error);
+        this.estado(lim ? `${f.nombre} llegó a su límite gratis por ahora. Espera 1–2 minutos y vuelve a intentar` + (Cuenta.dentro ? '.' : ', o entra con tu correo para usar también Puter.')
+          : 'No se pudo generar la imagen' + (f ? ` (${f.nombre}: ${String(f.error).slice(0, 60)})` : '') + '. Espera unos segundos y vuelve a intentar.', 'err');
         return;
       }
       this.cands = r.orden; this.idx = 0;

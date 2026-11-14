@@ -15,15 +15,28 @@ const AI = {
       p.then(ok, mal);
     });
   },
-  _oai(url, key, modelo) {
+  _oai(url, key, modelo, extra = {}) {
     return async (msgs, signal, maxTok = 8000) => {
       const h = { 'Content-Type': 'application/json' }; if (key) h.Authorization = 'Bearer ' + key;
       if (url.includes('openrouter')) { h['HTTP-Referer'] = location.origin; h['X-Title'] = 'Craft Web'; }
-      const body = { model: modelo, messages: msgs };
-      if (!url.includes('pollinations')) body.max_tokens = maxTok;
-      const j = await AI._json(url, { method: 'POST', headers: h, body: JSON.stringify(body) }, signal);
+      const pedir = async (mod, tok) => {
+        const body = { model: mod, messages: msgs, ...extra };
+        if (/gpt-oss|pollinations/.test(mod + url)) body.reasoning_effort = 'low';
+        if (/qwen/.test(mod)) body.reasoning_effort = 'none'; // sin "pensar": todo el presupuesto va al HTML
+        if (!url.includes('pollinations')) body.max_tokens = Math.min(tok, extra.topeTok || tok);
+        delete body.topeTok; delete body.respaldo;
+        return AI._json(url, { method: 'POST', headers: h, body: JSON.stringify(body) }, signal);
+      };
+      let j;
+      try { j = await pedir(modelo, maxTok); }
+      catch (e) {
+        // Límite del plan gratis (429): un reintento con menos tokens o con el modelo de respaldo
+        if (!/HTTP 429/.test(e.message) || (signal && signal.aborted)) throw e;
+        await new Promise(r => setTimeout(r, 1200));
+        j = await pedir(extra.respaldo || modelo, Math.min(maxTok, 6000));
+      }
       const c = j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
-      const limpio = String(c).replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+      const limpio = String(c || '').replace(/<think>[\s\S]*?<\/think>/g, '').trim();
       if (!limpio) throw new Error('Respuesta vacía'); return limpio;
     };
   },
@@ -43,7 +56,8 @@ const AI = {
       { id: 'pollinations', nombre: 'Pollinations', disponible: () => true,
         llamar: (msgs, signal) => AI._oai('https://text.pollinations.ai/openai', null, 'openai')(msgs, signal) },
       ...['groq', 'groq2', 'groq3'].map((kid, i) => ({ id: kid, nombre: 'Groq ' + (i + 1), disponible: () => !!k[kid],
-        llamar: (msgs, signal) => AI._oai('https://api.groq.com/openai/v1/chat/completions', k[kid], k[kid + 'Modelo'] || (i === 1 ? 'qwen/qwen3.8-27b' : 'openai/gpt-oss-120b'))(msgs, signal) })),
+        llamar: (msgs, signal) => AI._oai('https://api.groq.com/openai/v1/chat/completions', k[kid], k[kid + 'Modelo'] || (i === 1 ? 'qwen/qwen3.8-27b' : 'openai/gpt-oss-120b'),
+          i === 1 ? { topeTok: 4000, respaldo: 'openai/gpt-oss-20b' } : { respaldo: 'openai/gpt-oss-20b' })(msgs, signal) })),
       { id: 'gemini', nombre: 'Gemini', disponible: () => !!k.gemini,
         llamar: (msgs, signal) => AI._oai('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', k.gemini, k.geminiModelo || 'gemini-3.1-flash-lite')(msgs, signal) },
       { id: 'openrouter', nombre: 'OpenRouter', disponible: () => !!k.openrouter,
@@ -128,6 +142,17 @@ const AI = {
     ];
   },
 
+  /* Recorte centrado a la proporción pedida (si la IA devolvió otra) */
+  async _recortar(img, ratio) {
+    const iw = img.naturalWidth, ih = img.naturalHeight;
+    let cw = iw, ch = Math.round(iw / ratio); if (ch > ih) { ch = ih; cw = Math.round(ih * ratio); }
+    const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+    c.getContext('2d').drawImage(img, (iw - cw) / 2, (ih - ch) / 2, cw, ch, 0, 0, cw, ch);
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.92));
+    const url = URL.createObjectURL(blob); const im = await cargarImg(url);
+    return { blob, url, img: im, w: cw, h: ch };
+  },
+
   async imagenes(prompt, w, h, seed, mejorar, { ventana = 25000, tope = 100000, onProgreso } = {}) {
     const provs = this.provImagen().filter(p => p.disponible());
     const ctrls = provs.map(() => new AbortController());
@@ -142,7 +167,9 @@ const AI = {
           const ratioOk = Math.abs(iw / ih - w / h) < 0.03;
           const tam = Math.min(1, (iw * ih) / (w * h));
           const detalle = Math.min(1, blob.size / (iw * ih * 0.15));
-          res.push({ id: p.id, nombre: p.nombre, blob, url, img, w: iw, h: ih, ok: true, puntos: 50 + (ratioOk ? 30 : 0) + tam * 10 + detalle * 10 });
+          const r0 = { id: p.id, nombre: p.nombre, blob, url, img, w: iw, h: ih, ok: true, puntos: 50 + (ratioOk ? 30 : 0) + tam * 10 + detalle * 10 };
+          if (!ratioOk) { try { Object.assign(r0, await AI._recortar(img, w / h)); URL.revokeObjectURL(url); } catch (e) {} }
+          res.push(r0);
           AI.estado[p.id] = 'ok';
           if (!primera) { primera = true; setTimeout(() => fin(), ventana); }
         })

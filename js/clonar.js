@@ -38,18 +38,24 @@ const Clonar = {
   },
   estado(t, cls = '') { const e = $('#cEstado'); e.textContent = t; e.className = 'estado ' + cls; },
 
-  /* ---------- Leer un sitio (Jina Reader y, si falla, dos proxys públicos) ---------- */
+  /* ---------- Leer un sitio: varios lectores a la vez, gana el primero que traiga texto ---------- */
   async leerSitio(url) {
-    const intentos = [
-      async s => { const r = await fetch('https://r.jina.ai/' + url, { headers: { Accept: 'text/plain' }, signal: s }); if (!r.ok) throw new Error(r.status); return (await r.text()).slice(0, 9000); },
-      async s => { const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url), { signal: s }); if (!r.ok) throw new Error(r.status); return this.extraer(await r.text()); },
-      async s => { const r = await fetch('https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url), { signal: s }); if (!r.ok) throw new Error(r.status); return this.extraer(await r.text()); },
+    const txt = async r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); };
+    const html = async t => this.extraer(t);
+    const lectores = [
+      s => fetch('https://r.jina.ai/' + url, { headers: { Accept: 'text/plain' }, signal: s }).then(txt).then(t => t.slice(0, 9000)),
+      s => fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url), { signal: s }).then(txt).then(html),
+      s => fetch('https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url), { signal: s }).then(txt).then(html),
     ];
-    for (const f of intentos) {
-      const c = new AbortController(); const t = setTimeout(() => c.abort(), 15000);
-      try { const txt = await f(c.signal); if (txt && txt.replace(/\s+/g, ' ').trim().length > 120) return txt; } catch (e) {} finally { clearTimeout(t); }
-    }
-    return null;
+    if (Cuenta.dentro && window.puter && puter.net && puter.net.fetch) lectores.unshift(() => puter.net.fetch(url).then(txt).then(html));
+    const valido = x => { if (!x || x.replace(/\s+/g, ' ').trim().length < 120) throw new Error('vacío'); return x; };
+    const intentar = async (fs, ms) => {
+      const c = new AbortController(); const t = setTimeout(() => c.abort(), ms);
+      try { return await Promise.any(fs.map(f => f(c.signal).then(valido))); } catch (e) { return null; } finally { clearTimeout(t); c.abort(); }
+    };
+    // Primero el lector principal (más limpio); si falla, todos los demás a la vez
+    const principal = lectores.length > 3 ? lectores.slice(0, 2) : lectores.slice(0, 1);
+    return (await intentar(principal, 10000)) || (await intentar(lectores.slice(principal.length), 15000));
   },
   extraer(html) {
     const d = new DOMParser().parseFromString(html, 'text/html');
