@@ -1,5 +1,5 @@
-const V = 'craftweb-v2';
-const BASE = ['./', 'index.html', 'css/style.css', 'js/util.js', 'js/ai.js', 'js/diseno.js', 'js/lienzo.js', 'js/ia.js', 'js/clonar.js', 'js/app.js', 'lib/fabric.min.js', 'lib/jspdf.umd.min.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
+const V = 'craftweb-v3';
+const BASE = ['./', 'index.html', 'css/style.css', 'js/util.js', 'js/ai.js', 'js/diseno.js', 'js/lienzo.js', 'js/ia.js', 'js/clonar.js', 'js/chat.js', 'js/app.js', 'lib/fabric.min.js', 'lib/jspdf.umd.min.js', 'manifest.json', 'icons/icon-192.png', 'icons/icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(BASE))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== V).map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener('fetch', e => {

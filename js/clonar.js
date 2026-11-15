@@ -29,6 +29,10 @@ const Clonar = {
     this.pintarProyectos();
   },
   ponerModo(m) {
+    // Cada modo guarda su propio texto: los Detalles del link no se mezclan con la idea
+    this.textos = this.textos || { url: '', idea: '' };
+    if (this.modo && this.modo !== m) { this.textos[this.modo] = $('#cIdea').value; $('#cIdea').value = this.textos[m] || ''; }
+    $('#cIdea').placeholder = m === 'url' ? 'Ej: que tenga modo oscuro y sea para mi negocio' : 'Ej: una app para apuntar mis gastos con categorías y gráfica';
     this.modo = m;
     $$('#cModo button').forEach(x => x.classList.toggle('activo', x.dataset.modo === m));
     $$('.c-url').forEach(e => e.hidden = m !== 'url');
@@ -142,6 +146,7 @@ const Clonar = {
     const r = await this.correr([{ role: 'system', content: SISTEMA_CLON }, { role: 'user', content: pedido.texto }],
       `¿Cuál de estas apps HTML cumple mejor esta petición: "${(pedido.idea || pedido.url || '').slice(0, 300)}"? Valora que esté completa, que funcione y que se vea bien en celular.`);
     if (!r) return;
+    if (!repetir) { $('#cIdea').value = ''; if (this.textos) this.textos[this.modo] = ''; } // salió bien: no arrastrar texto viejo a la siguiente
     const mismoId = this.actual && repetir ? this.actual.id : null;
     this.actual = { id: mismoId, html: r.html, pedido, chat: [{ yo: false, t: `Primera versión lista (ganó ${r.gano}).${pedido.tipo === 'url' && !pedido.leido ? ' No pude leer el sitio, así que me basé en lo que sé de él.' : ''}` }], fecha: Date.now() };
     this.mostrar(r.gano);

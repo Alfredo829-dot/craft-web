@@ -1,8 +1,8 @@
 /* Arranque, pestañas, ajustes de IA y llaves cifradas con PIN */
 const App = {
-  tab: 'diseno',
+  tab: 'chat',
   ir(tab) {
-    this.tab = tab;
+    this.tab = tab; document.body.dataset.tab = tab;
     $$('.tab').forEach(s => s.classList.toggle('activo', s.id === 'tab-' + tab));
     $$('.tabs button').forEach(b => b.classList.toggle('activo', b.dataset.tab === tab));
     $('#btnAjustes').classList.toggle('activo', tab === 'ajustes');
@@ -10,6 +10,7 @@ const App = {
     if (tab === 'lienzo') { Lienzo.ajustarTam(); Lienzo.c.requestRenderAll(); }
     if (tab === 'ajustes') Ajustes.pintar();
     if (tab !== 'ajustes') localStorage.setItem('cw_tab', tab);
+    if (tab === 'chat') setTimeout(() => Chat.alFinal(), 50);
   },
 };
 
@@ -105,12 +106,12 @@ function red() { $('#avisoRed').hidden = navigator.onLine; }
 
 window.addEventListener('DOMContentLoaded', async () => {
   $$('.tabs button').forEach(b => b.onclick = () => { App.ir(b.dataset.tab); window.scrollTo(0, 0); });
-  $('#btnAjustes').onclick = () => { App.ir(App.tab === 'ajustes' ? (localStorage.getItem('cw_tab') || 'diseno') : 'ajustes'); window.scrollTo(0, 0); };
+  $('#btnAjustes').onclick = () => { App.ir(App.tab === 'ajustes' ? (localStorage.getItem('cw_tab') || 'chat') : 'ajustes'); window.scrollTo(0, 0); };
   $('#btnCuenta').onclick = () => (Cuenta.dentro ? (App.ir('ajustes'), window.scrollTo(0, 0)) : Cuenta.entrar());
   $('#ajEntrar').onclick = () => Cuenta.entrar();
   $('#ajSalir').onclick = () => Cuenta.salir();
   $('#ajSync').onclick = async () => { toast('Sincronizando…'); await Sync.ahora(); toast('Sincronizado ☁'); };
-  $('#ajVolver').onclick = () => App.ir(localStorage.getItem('cw_tab') || 'diseno');
+  $('#ajVolver').onclick = () => App.ir(localStorage.getItem('cw_tab') || 'chat');
   $$('[data-intro]').forEach(d => {
     if (localStorage.getItem('cw_intro_' + d.dataset.intro)) d.hidden = true;
     d.querySelector('.cerrar').onclick = () => { d.hidden = true; localStorage.setItem('cw_intro_' + d.dataset.intro, '1'); };
@@ -124,16 +125,19 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (ks.includes('comps')) { Lienzo.comps = (await DB.get('comps')) || []; Lienzo.pintarComps(); }
     if (ks.some(k => k.startsWith('gal:'))) IA.pintarGaleria();
     if (ks.some(k => k.startsWith('clon:'))) Clonar.pintarProyectos();
+    if (ks.includes('chat')) Chat.cargar();
     toast('☁ Traje tus cosas de la nube');
   });
 
-  Diseno.iniciar(); Lienzo.iniciar(); IA.iniciar(); Clonar.iniciar();
+  Diseno.iniciar(); Lienzo.iniciar(); IA.iniciar(); Clonar.iniciar(); await Chat.iniciar();
   Cuenta.pintar();
-  const tab = localStorage.getItem('cw_tab') || 'diseno';
+  // El chat es la pantalla principal (una vez para todos; luego recuerda la última pestaña)
+  if (!localStorage.getItem('cw_chat_v1')) { localStorage.setItem('cw_chat_v1', '1'); localStorage.setItem('cw_tab', 'chat'); }
+  const tab = localStorage.getItem('cw_tab') || 'chat';
   App.ir('diseno');
   await Diseno.arrancar();
   App.ir('lienzo'); await Lienzo.arrancar();
-  App.ir(['diseno', 'lienzo', 'ia', 'clonar'].includes(tab) ? tab : 'diseno');
+  App.ir(['chat', 'diseno', 'lienzo', 'ia', 'clonar'].includes(tab) ? tab : 'chat');
   document.body.classList.add('listo');
   Cuenta.iniciar();
   Llaves.iniciar();

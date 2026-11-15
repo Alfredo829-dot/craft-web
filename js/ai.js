@@ -16,7 +16,7 @@ const AI = {
     });
   },
   _oai(url, key, modelo, extra = {}) {
-    return async (msgs, signal, maxTok = 8000) => {
+    return async (msgs, signal, maxTok = 6000) => {
       const h = { 'Content-Type': 'application/json' }; if (key) h.Authorization = 'Bearer ' + key;
       if (url.includes('openrouter')) { h['HTTP-Referer'] = location.origin; h['X-Title'] = 'Craft Web'; }
       const pedir = async (mod, tok) => {
@@ -54,21 +54,25 @@ const AI = {
           if (!c || c === '[object Object]') throw new Error('Respuesta vacía'); return c;
         } },
       { id: 'pollinations', nombre: 'Pollinations', disponible: () => true,
-        llamar: (msgs, signal) => AI._oai('https://text.pollinations.ai/openai', null, 'openai')(msgs, signal) },
+        llamar: async (msgs, signal) => {
+          try { return await AI._oai('https://text.pollinations.ai/openai', null, 'openai')(msgs, signal); }
+          catch (e) { const m = /HTTP 402[\s\S]*?Retry after (\d+)s/.exec(e.message) || (/HTTP 402/.test(e.message) && [0, 45]); if (m) AI.pausa.pollinations = Date.now() + (+m[1] + 2) * 1000; throw e; }
+        } },
       ...['groq', 'groq2', 'groq3'].map((kid, i) => ({ id: kid, nombre: 'Groq ' + (i + 1), disponible: () => !!k[kid],
-        llamar: (msgs, signal) => AI._oai('https://api.groq.com/openai/v1/chat/completions', k[kid], k[kid + 'Modelo'] || (i === 1 ? 'qwen/qwen3.8-27b' : 'openai/gpt-oss-120b'),
-          i === 1 ? { topeTok: 4000, respaldo: 'openai/gpt-oss-20b' } : { respaldo: 'openai/gpt-oss-20b' })(msgs, signal) })),
+        llamar: (msgs, signal, mt) => AI._oai('https://api.groq.com/openai/v1/chat/completions', k[kid], k[kid + 'Modelo'] || (i === 1 ? 'qwen/qwen3.8-27b' : 'openai/gpt-oss-120b'),
+          i === 1 ? { topeTok: 4000, respaldo: 'openai/gpt-oss-20b' } : { respaldo: 'openai/gpt-oss-20b' })(msgs, signal, mt) })),
       { id: 'gemini', nombre: 'Gemini', disponible: () => !!k.gemini,
-        llamar: (msgs, signal) => AI._oai('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', k.gemini, k.geminiModelo || 'gemini-3.1-flash-lite')(msgs, signal) },
+        llamar: (msgs, signal, mt) => AI._oai('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', k.gemini, k.geminiModelo || 'gemini-3.1-flash-lite')(msgs, signal, mt) },
       { id: 'openrouter', nombre: 'OpenRouter', disponible: () => !!k.openrouter,
-        llamar: (msgs, signal) => AI._oai('https://openrouter.ai/api/v1/chat/completions', k.openrouter, k.openrouterModelo || 'google/gemma-4-31b-it:free')(msgs, signal) },
+        llamar: (msgs, signal, mt) => AI._oai('https://openrouter.ai/api/v1/chat/completions', k.openrouter, k.openrouterModelo || 'google/gemma-4-31b-it:free')(msgs, signal, mt) },
     ];
   },
-  disponibles() { return this.provTexto().filter(p => p.disponible()); },
+  pausa: {}, // id -> hasta cuándo descansa (límite gratis por IP de Pollinations: 1 respuesta cada ~45 s)
+  disponibles() { return this.provTexto().filter(p => p.disponible() && !(this.pausa[p.id] > Date.now())); },
 
   /* Corre todas en paralelo. Espera a todas, con un margen de `ventana` ms después
      de la primera respuesta válida, y un tope total. Devuelve todos los resultados. */
-  async todos(msgs, { validar = async t => ({ ok: !!t, puntos: 1 }), ventana = 25000, tope = 90000, onProgreso, provs } = {}) {
+  async todos(msgs, { validar = async t => ({ ok: !!t, puntos: 1 }), ventana = 25000, tope = 90000, onProgreso, provs, maxTok } = {}) {
     provs = provs || this.disponibles();
     const ctrls = provs.map(() => new AbortController());
     const res = []; let fin; const listo = new Promise(r => (fin = r));
@@ -76,7 +80,7 @@ const AI = {
     const tTope = setTimeout(() => fin(), tope);
     if (!pend) fin();
     provs.forEach((p, i) => {
-      p.llamar(msgs, ctrls[i].signal)
+      p.llamar(msgs, ctrls[i].signal, maxTok)
         .then(async texto => {
           const ms = Math.round(performance.now() - t0);
           const v = await validar(texto, p);
@@ -92,12 +96,12 @@ const AI = {
   },
 
   /* Pregunta corta a la IA más rápida que haya respondido (para el juez) */
-  async rapida(msgs, preferidos = [], timeout = 20000) {
+  async rapida(msgs, preferidos = [], timeout = 20000, maxTok = 600) {
     const todos = this.disponibles();
     const orden = [...preferidos.map(id => todos.find(p => p.id === id)).filter(Boolean), ...todos.filter(p => !preferidos.includes(p.id))];
     for (const p of orden) {
       const c = new AbortController(); const t = setTimeout(() => c.abort(), timeout);
-      try { const r = await p.llamar(msgs, c.signal); clearTimeout(t); return { texto: r, id: p.id, nombre: p.nombre }; }
+      try { const r = await p.llamar(msgs, c.signal, maxTok); clearTimeout(t); return { texto: r, id: p.id, nombre: p.nombre }; }
       catch (e) { clearTimeout(t); }
     }
     throw new Error('Ninguna IA respondió');

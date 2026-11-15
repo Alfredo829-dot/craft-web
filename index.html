@@ -24,8 +24,19 @@
 
 <main>
 <div class="aviso" id="avisoRed" hidden>📡 Sin internet: puedes seguir diseñando y todo se guarda en tu teléfono. La IA vuelve cuando te conectes.</div>
+<!-- ===================== CHAT ===================== -->
+<section id="tab-chat" class="tab">
+  <div class="chat-cab"><div><b>💬 Pídeme lo que quieras</b><p class="muted">Diseños, maquetas, imágenes y apps: escríbelo y yo lo hago con varias IA a la vez.</p></div><button type="button" class="chico" id="chatBorrar" aria-label="Borrar conversación">🗑</button></div>
+  <div class="vacio chat-vacio" id="chatVacio"><b>¿Qué hacemos hoy?</b>Toca una idea o escríbela abajo con tus palabras.</div>
+  <div class="chat-lista" id="chatLista" aria-live="polite"></div>
+  <div class="ideas chat-suger" id="chatSuger"></div>
+  <form class="chat-caja" id="chatForm" autocomplete="off">
+    <textarea id="chatIn" rows="1" placeholder="Escribe lo que quieres hacer…" enterkeyhint="send" aria-label="Mensaje"></textarea>
+    <button class="primario" id="chatEnviar" type="submit" aria-label="Enviar">➤</button>
+  </form>
+</section>
 <!-- ===================== DISEÑO ===================== -->
-<section id="tab-diseno" class="tab activo">
+<section id="tab-diseno" class="tab">
   <div class="intro" data-intro="diseno"><button class="cerrar" aria-label="Cerrar">✕</button><b>🎨 Diseña posts, flyers e historias</b><p>Escoge un tamaño y una plantilla, toca cualquier texto para cambiarlo y descarga en PNG o PDF.</p></div>
   <div class="chips" id="dFormatos"></div>
   <div class="grid4">
@@ -282,7 +293,8 @@
 </main>
 
 <nav class="tabs">
-  <button data-tab="diseno" class="activo"><span>🎨</span>Diseño</button>
+  <button data-tab="chat" class="activo"><span>💬</span>Chat</button>
+  <button data-tab="diseno"><span>🎨</span>Diseño</button>
   <button data-tab="lienzo"><span>🧩</span>Lienzo</button>
   <button data-tab="ia"><span>✨</span>IA</button>
   <button data-tab="clonar"><span>⚡</span>Clonar</button>
@@ -317,6 +329,7 @@
 <script src="js/lienzo.js"></script>
 <script src="js/ia.js"></script>
 <script src="js/clonar.js"></script>
+<script src="js/chat.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
