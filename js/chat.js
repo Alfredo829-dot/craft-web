@@ -47,6 +47,12 @@ const SUGERENCIAS_CHAT = ['Haz un post de promoción que diga “Tacos 2x1 hoy�
 
 const COLORES_ES = { rojo: '#ef4444', azul: '#3b82f6', verde: '#22c55e', amarillo: '#facc15', naranja: '#f97316', morado: '#8b5cf6', rosa: '#ec4899', negro: '#111111', blanco: '#ffffff', gris: '#6b7280', dorado: '#d4a017', cafe: '#8b5a2b', café: '#8b5a2b', turquesa: '#14b8a6', celeste: '#38bdf8', vino: '#7f1d1d' };
 
+function dist(a, b) { // distancia de edición (para nombres con errores de dedo)
+  const m = a.length, n = b.length; if (Math.abs(m - n) > 2) return 9; const d = Array.from({ length: m + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[m][n];
+}
 const Chat = {
   msgs: [], ocupado: false,
 
@@ -129,7 +135,7 @@ const Chat = {
       if (h.h === 'confirmar_borrar') {
         const v = await DB.get(h.clon); if (!v) { toast('Ya estaba borrada'); return; }
         await DB.del(h.clon); if (Clonar.actual && Clonar.actual.id === h.clon) Clonar.actual.id = null; Clonar.pintarProyectos();
-        b.closest('.cm-bts').innerHTML = '<span class="muted">🗑 Borrada</span>';
+        b.closest('.cm-bts, li').innerHTML = '<span class="muted">🗑 Borrada</span>';
         this.msgs.push({ yo: false, t: `Listo, borré “${v.nombre}”.` }); await this.guardar(); this.pintar(); this.alFinal(); return;
       }
       if (h.h === 'cancelar') { b.closest('.cm-bts').innerHTML = '<span class="muted">Cancelado</span>'; return; }
@@ -308,6 +314,11 @@ const Chat = {
     try { return await this._ejecutar(a, burb); }
     finally { h.bloq = false; clearTimeout(h.t); h.t = null; h._guardarYa(); }
   },
+  async _proyecto(a, v) {
+    if (a.accion === 'proyecto_abrir') { Clonar.actual = v; Clonar.ultimoPedido = { inicial: v.pedido }; Clonar.mostrar(''); return { t: `📂 Abrí “${v.nombre}”. Ya puedes pedirme cambios.`, adj: [{ tipo: 'app', clon: v.id }] }; }
+    return { t: `¿Seguro que borro “${v.nombre}”? No se puede deshacer.`, adj: [{ tipo: 'botones', items: [{ t: '🗑 Sí, borrar', hacer: { h: 'confirmar_borrar', clon: v.id }, cls: 'peligro' }, { t: 'Cancelar', hacer: { h: 'cancelar' } }] }] };
+      
+  },
   async _ejecutar(a, burb) {
     const dis = (t, extra = []) => ({ t, adj: [{ tipo: 'diseno', src: this.fotoDiseno() }, ...extra] });
     switch (a.accion) {
@@ -418,9 +429,13 @@ const Chat = {
         const pal = q.split(/[^a-z0-9áéíóúñ.]+/).filter(w => w.length > 3);
         const v = items.find(x => (x.nombre || '').toLowerCase() === q) || items.find(x => txt(x).includes(q) || (q && q.includes((x.nombre || '').toLowerCase())))
           || items.map(x => [x, pal.filter(w => txt(x).includes(w)).length]).filter(z => z[1]).sort((a, b) => b[1] - a[1]).map(z => z[0])[0];
-        if (!v) throw new Error(`no encontré una app llamada “${a.nombre}”`);
-        if (a.accion === 'proyecto_abrir') { Clonar.actual = v; Clonar.ultimoPedido = { inicial: v.pedido }; Clonar.mostrar(''); return { t: `📂 Abrí “${v.nombre}”. Ya puedes pedirme cambios.`, adj: [{ tipo: 'app', clon: v.id }] }; }
-        return { t: `¿Seguro que borro “${v.nombre}”? No se puede deshacer.`, adj: [{ tipo: 'botones', items: [{ t: '🗑 Sí, borrar', hacer: { h: 'confirmar_borrar', clon: v.id }, cls: 'peligro' }, { t: 'Cancelar', hacer: { h: 'cancelar' } }] }] };
+        const v2 = v || items.find(x => txt(x).split(/[^a-z0-9áéíóúñ]+/).some(t => t.length >= 5 && pal.some(w => { w = w.replace(/\..*$/, ''); return w.length >= 5 && dist(t, w) <= (Math.min(t.length, w.length) >= 7 ? 2 : 1); })));
+        if (!v2) {
+          if (!items.length) return { t: '📁 Aún no tienes apps guardadas.' };
+          const borrar = a.accion === 'proyecto_borrar';
+          return { t: `No encontré “${a.nombre}”. ¿Cuál quieres ${borrar ? 'borrar' : 'abrir'}?`, adj: [{ tipo: 'lista', items: items.slice(0, 20).map(x => ({ t: '⚡ ' + x.nombre, bts: [borrar ? { t: '🗑 Borrar', hacer: { h: 'confirmar_borrar', clon: x.id }, cls: 'peligro' } : { t: 'Abrir', hacer: { h: 'app_abrir', clon: x.id } }] })) }] };
+        }
+        return this._proyecto(a, v2);
       }
       case 'galeria_listar': {
         const ks = (await DB.llaves('gal:')); const vs = []; for (const k of ks) { const v = await DB.get(k); if (v) vs.push([k, v]); }
